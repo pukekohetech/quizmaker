@@ -4,19 +4,144 @@
 <meta charset="UTF-8">
 <title>Quiz JSON Builder for BCATS Safety Assessments</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; line-height: 1.5; }
-  h1, h2 { color: #2c3e50; }
-  label { display: block; margin-top: 12px; font-weight: bold; }
-  input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 1000px;
+    margin: 20px auto;
+    line-height: 1.5;
+    background: #f4f6fb;
+  }
+  h1 {
+    color: #1b3a57;
+    background: linear-gradient(90deg, #1b3a57, #2969b0);
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 22px;
+  }
+  h2 {
+    color: #1b3a57;
+    border-bottom: 2px solid #d0d7e2;
+    padding-bottom: 4px;
+  }
+  label { display: block; margin-top: 10px; font-weight: bold; font-size: 13px; }
+  input, textarea, select {
+    width: 100%;
+    padding: 6px 8px;
+    margin-top: 4px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    border: 1px solid #ccd2e0;
+    font-size: 13px;
+  }
   textarea { height: 100px; }
-  .section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #f9f9f9; }
-  .question, .teacher, .rubric-row, .option-row { border: 1px solid #ccc; padding: 12px; margin: 10px 0; background: white; border-radius: 5px; position: relative; }
-  .remove { float: right; color: red; cursor: pointer; }
-  button { padding: 10px 20px; margin: 10px 5px 10px 0; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+  .section {
+    border: 1px solid #c3d0ea;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    background: #e9f1ff;
+  }
+  .teacher {
+    border: 1px solid #cfd8e3;
+    padding: 10px;
+    margin: 8px 0;
+    background: #ffffff;
+    border-radius: 6px;
+    position: relative;
+  }
+  .question {
+    border: 2px solid #b0c4ff;
+    padding: 12px;
+    margin: 12px 0;
+    background: #ffffff;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .question:nth-child(odd) {
+    border-left: 6px solid #4c8bf5;
+  }
+  .question:nth-child(even) {
+    border-left: 6px solid #2ecc71;
+  }
+  .rubric-row, .option-row {
+    border: 1px solid #dde3f0;
+    padding: 10px;
+    margin: 8px 0;
+    background: #fdfdff;
+    border-radius: 6px;
+    position: relative;
+  }
+  .options {
+    border: 1px solid #ffd8a8;
+    background: #fff7e6;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  .options h4 {
+    margin: 0 0 6px;
+    color: #b35b00;
+  }
+  .rubric {
+    border: 1px solid #c3e6cb;
+    background: #f0fff4;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  .rubric h4 {
+    margin: 0 0 6px;
+    color: #2b7a32;
+  }
+  .remove {
+    float: right;
+    color: #e74c3c;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button {
+    padding: 7px 12px;
+    margin: 6px 4px 6px 0;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+  }
   button:hover { background: #2980b9; }
   .add-btn { background: #27ae60; }
   .add-btn:hover { background: #1e8449; }
+  .secondary-btn { background: #7f8c8d; }
+  .secondary-btn:hover { background: #626e70; }
   .controls { margin: 20px 0; }
+
+  .image-drop {
+    margin-top: 6px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 2px dashed #9aa5c3;
+    background: #f3f5ff;
+    font-size: 12px;
+    text-align: center;
+    color: #3b4a73;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .image-drop span {
+    display: block;
+  }
+  .image-drop.dragover {
+    background: #dbe4ff;
+    border-color: #4c6fff;
+  }
+  .image-filename-note {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+  }
 </style>
 </head>
 <body>
@@ -50,11 +175,11 @@
 <div class="controls">
   <input type="file" id="jsonFile" accept="application/json">
   <button type="button" onclick="loadJSONFile()">Load JSON File</button>
+  <button type="button" onclick="clearDraft()">Clear Draft</button>
   <button type="button" onclick="generateJSON()">Download JSON File</button>
 </div>
 
 <script>
-// ---------- Data structure ----------
 let data = {
   APP_ID: "US24352_SAFETY",
   VERSION: "2025",
@@ -64,6 +189,8 @@ let data = {
   TEACHERS: [],
   ASSESSMENTS: []
 };
+
+let isLoading = false;
 
 // ---------- Teachers ----------
 function addTeacher(t = null) {
@@ -93,9 +220,20 @@ function addAssessment(a = null) {
   div.innerHTML = `
     <h2>Assessment</h2>
     <span class="remove" onclick="this.parentElement.parentElement.remove()">✖ Remove Assessment</span>
+    <button type="button" class="secondary-btn" onclick="duplicateAssessment(this)">Duplicate Assessment</button>
     <label>Assessment ID <input type="text" class="assId" value="${a ? (a.id || '') : ''}"></label>
     <label>Title <input type="text" class="assTitle" value="${a ? (a.title || '') : ''}"></label>
     <label>Subtitle <input type="text" class="assSubtitle" value="${a ? (a.subtitle || '') : ''}"></label>
+    <label>US Number <input type="text" class="assUSNumber" value="${a ? (a.usNumber || '') : ''}"></label>
+    <label>US Version <input type="text" class="assUSVersion" value="${a ? (a.usVersion || '') : ''}"></label>
+    <label>Credits <input type="number" class="assCredits" value="${a && a.credits != null ? a.credits : ''}"></label>
+    <label>Standard Type
+      <select class="assType">
+        <option value="">(optional)</option>
+        <option value="internal" ${a && a.standardType === 'internal' ? 'selected' : ''}>Internal</option>
+        <option value="external" ${a && a.standardType === 'external' ? 'selected' : ''}>External</option>
+      </select>
+    </label>
     <div class="questions"></div>
     <button type="button" class="add-btn" onclick="addQuestion(this.closest('.section').querySelector('.questions'))">+ Add Question</button>
   `;
@@ -103,15 +241,39 @@ function addAssessment(a = null) {
   if (a && a.questions) a.questions.forEach(q => addQuestion(div.querySelector('.questions'), q));
 }
 
+function duplicateAssessment(btn) {
+  const assDiv = btn.closest('.section');
+  const container = document.getElementById('assessments');
+  const clone = assDiv.cloneNode(true);
+  const idInput = clone.querySelector('.assId');
+  if (idInput) idInput.value = (idInput.value || '') + '_copy';
+  container.insertBefore(clone, assDiv.nextSibling);
+}
+
+// ---------- Questions ----------
 function addQuestion(container, q = null) {
   const div = document.createElement('div');
   div.className = 'question';
   div.innerHTML = `
     <span class="remove" onclick="this.parentElement.remove()">✖</span>
+    <button type="button" class="secondary-btn" onclick="duplicateQuestion(this)">Duplicate Question</button>
     <label>Question ID <input type="text" class="qId" value="${q ? (q.id || '') : ''}"></label>
     <label>Text (you can use \\n for line breaks)<br>
       <textarea class="qText">${q ? (q.text || '') : ''}</textarea></label>
-    <label>Image filename (or blank.jpg) <input type="text" class="qImage" value="${q ? (q.image || 'blank.jpg') : 'blank.jpg'}"></label>
+
+    <label>Image filename (or blank.jpg)
+      <input type="text" class="qImage" value="${q ? (q.image || 'blank.jpg') : 'blank.jpg'}">
+      <div class="image-filename-note">This will be written into the JSON. Make sure it matches the actual file name in your images folder.</div>
+    </label>
+    <div class="image-drop"
+         onclick="imageDropClick(this)"
+         ondragover="handleImageDragOver(event)"
+         ondragleave="handleImageDragLeave(event)"
+         ondrop="handleImageDrop(event)">
+      <span>📷 Drag a photo here or click to choose a file</span>
+      <input type="file" accept="image/*" class="qImageFile" style="display:none" onchange="handleImageFileSelect(this)">
+    </div>
+
     <label>Hint <input type="text" class="qHint" value="${q ? (q.hint || '') : ''}"></label>
     <label>Type 
       <select class="qType" onchange="toggleOptionsRubric(this)">
@@ -136,7 +298,7 @@ function addQuestion(container, q = null) {
   `;
   container.appendChild(div);
 
-  // ---- Options: populate for MC / create default for new question ----
+  // Options: MC
   const optContainer = div.querySelector('.option-list');
   if (q && q.type === 'mc' && Array.isArray(q.options)) {
     let correctIndex = -1;
@@ -151,21 +313,45 @@ function addQuestion(container, q = null) {
       });
     });
   } else if (!q) {
-    // New question: start with one empty option
     addOptionRow(optContainer);
   }
 
-  // ---- Rubric: only for non-MC questions ----
+  // Rubric for non-MC
   const rubricList = div.querySelector('.rubric-list');
   if (q && q.rubric && q.type !== 'mc') {
     q.rubric.forEach(r => addRubricRow(rubricList, r));
   } else if (!q || (q && q.type !== 'mc')) {
-    addRubricRow(rubricList); // at least one empty row for non-MC
+    addRubricRow(rubricList);
   }
 
-  // Ensure correct show/hide on initial load
+  // Ensure correct show/hide
   const select = div.querySelector('.qType');
   toggleOptionsRubric(select);
+
+  // Auto-suggest ID on text blur
+  const qText = div.querySelector('.qText');
+  qText.addEventListener('blur', () => suggestQuestionId(div));
+}
+
+function duplicateQuestion(btn) {
+  const qDiv = btn.closest('.question');
+  const container = qDiv.parentElement;
+  const clone = qDiv.cloneNode(true);
+  const idInput = clone.querySelector('.qId');
+  if (idInput) idInput.value = (idInput.value || '') + '_copy';
+  container.insertBefore(clone, qDiv.nextSibling);
+}
+
+function suggestQuestionId(qDiv) {
+  const idInput = qDiv.querySelector('.qId');
+  if (!idInput || idInput.value.trim()) return;
+  const text = qDiv.querySelector('.qText').value || '';
+  let base = text.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40);
+  if (!base) base = 'q' + Date.now();
+  idInput.value = base;
 }
 
 function toggleOptionsRubric(select) {
@@ -173,9 +359,52 @@ function toggleOptionsRubric(select) {
   const isMc = select.value === 'mc';
   const optionsDiv = qDiv.querySelector('.options');
   const rubricDiv = qDiv.querySelector('.rubric');
-
   if (optionsDiv) optionsDiv.style.display = isMc ? 'block' : 'none';
   if (rubricDiv) rubricDiv.style.display = isMc ? 'none' : 'block';
+}
+
+// ---------- Image drag/drop + file ----------
+function imageDropClick(dropDiv) {
+  const fileInput = dropDiv.querySelector('.qImageFile');
+  if (fileInput) fileInput.click();
+}
+
+function handleImageFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const qDiv = input.closest('.question');
+  if (!qDiv) return;
+  const imgInput = qDiv.querySelector('.qImage');
+  if (imgInput) {
+    imgInput.value = file.name; // just the filename for JSON
+  }
+}
+
+function handleImageDragOver(event) {
+  event.preventDefault();
+  const dropDiv = event.currentTarget;
+  dropDiv.classList.add('dragover');
+}
+
+function handleImageDragLeave(event) {
+  event.preventDefault();
+  const dropDiv = event.currentTarget;
+  dropDiv.classList.remove('dragover');
+}
+
+function handleImageDrop(event) {
+  event.preventDefault();
+  const dropDiv = event.currentTarget;
+  dropDiv.classList.remove('dragover');
+  const files = event.dataTransfer.files;
+  if (!files || !files.length) return;
+  const file = files[0];
+  const qDiv = dropDiv.closest('.question');
+  if (!qDiv) return;
+  const imgInput = qDiv.querySelector('.qImage');
+  if (imgInput) {
+    imgInput.value = file.name;
+  }
 }
 
 // ---------- Options (MC answers) ----------
@@ -195,34 +424,109 @@ function addOptionRow(container, opt = null) {
   container.appendChild(div);
 }
 
-// ---------- Rubric rows (with easy keywords) ----------
+// ---------- Rubric rows (layman-friendly) ----------
 function addRubricRow(container, r = null) {
   const div = document.createElement('div');
   div.className = 'rubric-row';
   div.innerHTML = `
     <span class="remove" onclick="this.parentElement.remove()">✖</span>
+
     <label>Points
       <input type="number" class="rPoints" value="${r ? (r.points || 1) : 1}">
     </label>
 
-    <label>Easy keywords/phrases (comma separated)
-      <input type="text" class="rEasy" placeholder="e.g. struck in the eye, flying particles, objects">
+    <label>Match type
+      <select class="rMode">
+        <option value="all">Answer contains ALL of these</option>
+        <option value="any">Answer contains ANY of these</option>
+        <option value="exact">Answer matches EXACTLY this phrase</option>
+      </select>
     </label>
 
-    <label>Regex check (advanced, optional)
+    <label>Keywords/phrases (comma separated)
+      <input type="text" class="rEasy" placeholder="e.g. eye injury, blindness, flying particles">
+    </label>
+
+    <label>Advanced regex (optional)
       <input type="text" class="rCheck" value="${r ? (r.check || '') : ''}">
     </label>
 
     <label>Flags (usually &quot;i&quot;)
       <input type="text" class="rFlags" value="${r ? (r.flags || 'i') : 'i'}">
     </label>
+
+    <label>Preview (auto-generated)
+      <div class="rPreview" style="font-size:11px; color:#555; min-height:1em;"></div>
+    </label>
+
+    <label>Try a sample student answer
+      <input type="text" class="rSample" placeholder="Type an example answer to test">
+    </label>
+    <button type="button" class="secondary-btn" onclick="testRubricRow(this.closest('.rubric-row'))">Test this rule</button>
+    <div class="rTestResult" style="font-size:11px; margin-top:4px;"></div>
   `;
   container.appendChild(div);
 }
 
-// ---------- Collect everything for export ----------
+// ---------- Regex builder helper ----------
+function buildCheckForRow(row) {
+  let check = row.querySelector('.rCheck').value.trim();
+  const flags = row.querySelector('.rFlags').value.trim() || 'i';
+  const easyInput = row.querySelector('.rEasy') ? row.querySelector('.rEasy').value.trim() : '';
+  const mode = row.querySelector('.rMode') ? row.querySelector('.rMode').value : 'all';
+
+  if (!check && easyInput) {
+    const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length) {
+      if (mode === 'all') {
+        const pieces = parts.map(p => {
+          const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          return `(?=.*${escaped})`;
+        });
+        check = pieces.join('') + '.*';
+      } else if (mode === 'any') {
+        const alternatives = parts.map(p =>
+          p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        ).join('|');
+        check = `(${alternatives})`;
+      } else if (mode === 'exact') {
+        const phrase = easyInput.trim();
+        const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        check = `^${escaped}$`;
+      }
+    }
+  }
+  const preview = row.querySelector('.rPreview');
+  if (preview) {
+    preview.textContent = check ? `Generated: ${check}` : '';
+  }
+  return { check, flags };
+}
+
+// ---------- Test rubric row ----------
+function testRubricRow(row) {
+  const { check, flags } = buildCheckForRow(row);
+  const sample = row.querySelector('.rSample').value;
+  const out = row.querySelector('.rTestResult');
+
+  if (!check) {
+    out.textContent = '⚠ No rule defined yet.';
+    return;
+  }
+  if (!sample) {
+    out.textContent = '⚠ Please type a sample answer.';
+    return;
+  }
+  try {
+    const re = new RegExp(check, flags);
+    out.textContent = re.test(sample) ? '✅ Match' : '❌ No match';
+  } catch (e) {
+    out.textContent = '⚠ Invalid regex: ' + e.message;
+  }
+}
+
+// ---------- Collect everything ----------
 function collectAll() {
-  // General fields
   data.APP_ID = document.getElementById('appId').value.trim();
   data.VERSION = document.getElementById('version').value.trim();
   data.APP_TITLE = document.getElementById('appTitle').value.trim();
@@ -234,7 +538,6 @@ function collectAll() {
 
   collectTeachers();
 
-  // Assessments
   data.ASSESSMENTS = Array.from(document.querySelectorAll('#assessments > .section')).map(assDiv => {
     const questions = Array.from(assDiv.querySelectorAll('.question')).map(qDiv => {
       const type = qDiv.querySelector('.qType').value;
@@ -251,15 +554,12 @@ function collectAll() {
       };
 
       if (type === 'mc') {
-        // Collect options
         const optRows = Array.from(qDiv.querySelectorAll('.option-row'));
         const options = optRows
           .map(r => r.querySelector('.optText').value.trim())
           .filter(o => o);
-
         question.options = options;
 
-        // Correct option from first checked row
         const correctRow = optRows.find(r => r.querySelector('.optCorrect').checked);
         if (correctRow) {
           const correctText = correctRow.querySelector('.optText').value.trim();
@@ -273,30 +573,12 @@ function collectAll() {
           }
         }
       } else {
-        // Short/long questions use easy keywords -> regex OR manual regex
         const rubric = Array.from(qDiv.querySelectorAll('.rubric-row')).map(row => {
           const points = parseInt(row.querySelector('.rPoints').value) || 1;
-          let check = row.querySelector('.rCheck').value.trim();
-          const flags = row.querySelector('.rFlags').value.trim() || 'i';
-          const easyInput = row.querySelector('.rEasy') ? row.querySelector('.rEasy').value.trim() : '';
-
-          // If no manual regex but easy keywords are given, build regex:
-          // requires ALL phrases, in any order: (?=.*phrase1)(?=.*phrase2).* 
-          if (!check && easyInput) {
-            const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
-            if (parts.length) {
-              const pieces = parts.map(p => {
-                const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                return `(?=.*${escaped})`;
-              });
-              check = pieces.join('') + '.*';
-            }
-          }
-
+          const { check, flags } = buildCheckForRow(row);
           return { points, check, flags };
         });
-
-        question.rubric = rubric.filter(r => r.check); // remove empty rules
+        question.rubric = rubric.filter(r => r.check);
       }
 
       return question;
@@ -306,22 +588,94 @@ function collectAll() {
       id: assDiv.querySelector('.assId').value.trim(),
       title: assDiv.querySelector('.assTitle').value.trim(),
       subtitle: assDiv.querySelector('.assSubtitle').value.trim(),
+      usNumber: assDiv.querySelector('.assUSNumber') ? assDiv.querySelector('.assUSNumber').value.trim() : '',
+      usVersion: assDiv.querySelector('.assUSVersion') ? assDiv.querySelector('.assUSVersion').value.trim() : '',
+      credits: (() => {
+        const v = assDiv.querySelector('.assCredits') ? assDiv.querySelector('.assCredits').value : '';
+        return v === '' ? null : parseInt(v) || null;
+      })(),
+      standardType: assDiv.querySelector('.assType') ? assDiv.querySelector('.assType').value : '',
       questions: questions
     };
   });
 }
 
+// ---------- Validation ----------
+function validateData(d) {
+  const errors = [];
+  if (!d.APP_ID) errors.push('APP_ID is empty.');
+  if (!d.VERSION) errors.push('VERSION is empty.');
+
+  if (!d.ASSESSMENTS || !d.ASSESSMENTS.length) {
+    errors.push('No assessments defined.');
+    return errors;
+  }
+
+  d.ASSESSMENTS.forEach((ass, ai) => {
+    const aLabel = ass.title || ass.id || `Assessment ${ai + 1}`;
+    if (!ass.id) errors.push(`${aLabel}: Assessment ID is empty.`);
+    if (!ass.questions || !ass.questions.length) {
+      errors.push(`${aLabel}: has no questions.`);
+      return;
+    }
+    ass.questions.forEach((q, qi) => {
+      const qLabel = `${aLabel} / ${q.id || 'Question ' + (qi + 1)}`;
+      if (!q.id) errors.push(`${qLabel}: Question ID is empty.`);
+      if (q.type === 'mc') {
+        if (!q.options || !q.options.length) {
+          errors.push(`${qLabel}: MC question has no options.`);
+        }
+        if (!q.rubric || !q.rubric.length) {
+          errors.push(`${qLabel}: MC question has no correct answer selected.`);
+        }
+      } else {
+        if (!q.rubric || !q.rubric.length) {
+          errors.push(`${qLabel}: has no rubric rules.`);
+        }
+      }
+    });
+  });
+
+  return errors;
+}
+
 // ---------- Generate & Download JSON ----------
 function generateJSON() {
   collectAll();
+  const errors = validateData(data);
+  if (errors.length) {
+    alert("Please fix these issues before downloading:\n\n" + errors.join("\n"));
+    return;
+  }
   const jsonString = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${data.APP_ID}_v${data.VERSION}.json`;
+  a.download = `${data.APP_ID || 'quiz'}_v${data.VERSION || ''}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ---------- Autosave ----------
+function autosave() {
+  if (isLoading) return;
+  try {
+    collectAll();
+    localStorage.setItem('bcats_quiz_builder_draft', JSON.stringify(data));
+  } catch (e) {
+    console.warn('Autosave failed', e);
+  }
+}
+
+document.addEventListener('input', autosave);
+document.addEventListener('change', autosave);
+
+function clearDraft() {
+  if (confirm('Clear saved draft and reset the builder?')) {
+    localStorage.removeItem('bcats_quiz_builder_draft');
+    location.reload();
+  }
 }
 
 // ---------- Load JSON from file ----------
@@ -346,16 +700,16 @@ function loadJSONFile() {
   reader.readAsText(file);
 }
 
-// ---------- Populate UI from a data object ----------
+// ---------- Populate UI from data ----------
 function loadFromData(obj) {
   if (!obj || typeof obj !== 'object') {
     alert('JSON does not look like a quiz data object.');
     return;
   }
 
-  data = obj; // keep a copy
+  isLoading = true;
+  data = obj;
 
-  // General
   document.getElementById('appId').value = obj.APP_ID || '';
   document.getElementById('version').value = obj.VERSION || '';
   document.getElementById('appTitle').value = obj.APP_TITLE || '';
@@ -366,23 +720,35 @@ function loadFromData(obj) {
   document.getElementById('deadlineMonth').value = deadline.month || 1;
   document.getElementById('deadlineLabel').value = deadline.label || '';
 
-  // Teachers
   const tContainer = document.getElementById('teachers');
   tContainer.innerHTML = '';
   (obj.TEACHERS || []).forEach(t => addTeacher(t));
 
-  // Assessments
   const aContainer = document.getElementById('assessments');
   aContainer.innerHTML = '';
   (obj.ASSESSMENTS || []).forEach(a => addAssessment(a));
+
+  isLoading = false;
 }
 
-// ---------- Initial setup ----------
-addTeacher({id:"RY", name:"Mr Reynolds", email:"ry@pukekohehigh.school.nz"});
-addTeacher({id:"RNR", name:"Mr Ranson", email:"rnr@pukekohehigh.school.nz"});
-addTeacher({id:"Other", name:"Other Teacher", email:"technology@pukekohehigh.school.nz"});
+// ---------- Initial setup / restore draft ----------
+(function init() {
+  const draft = localStorage.getItem('bcats_quiz_builder_draft');
+  if (draft) {
+    try {
+      const obj = JSON.parse(draft);
+      loadFromData(obj);
+      return;
+    } catch (e) {
+      console.warn('Could not load draft, starting fresh.');
+    }
+  }
 
-addAssessment(); // empty one to start adding questions
+  addTeacher({id:"RY", name:"Mr Reynolds", email:"ry@pukekohehigh.school.nz"});
+  addTeacher({id:"RNR", name:"Mr Ranson", email:"rnr@pukekohehigh.school.nz"});
+  addTeacher({id:"Other", name:"Other Teacher", email:"technology@pukekohehigh.school.nz"});
+  addAssessment();
+})();
 </script>
 
 </body>
