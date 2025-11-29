@@ -16,6 +16,7 @@
   button:hover { background: #2980b9; }
   .add-btn { background: #27ae60; }
   .add-btn:hover { background: #1e8449; }
+  .controls { margin: 20px 0; }
 </style>
 </head>
 <body>
@@ -46,8 +47,11 @@
   <button type="button" class="add-btn" onclick="addAssessment()">+ Add Assessment</button>
 </div>
 
-<br><br>
-<button onclick="generateJSON()">Download JSON File</button>
+<div class="controls">
+  <input type="file" id="jsonFile" accept="application/json">
+  <button type="button" onclick="loadJSONFile()">Load JSON File</button>
+  <button type="button" onclick="generateJSON()">Download JSON File</button>
+</div>
 
 <script>
 // ---------- Data structure ----------
@@ -67,9 +71,9 @@ function addTeacher(t = null) {
   div.className = 'teacher';
   div.innerHTML = `
     <span class="remove" onclick="this.parentElement.remove()">✖</span>
-    <label>ID <input type="text" class="tId" value="${t ? t.id : ''}"></label>
-    <label>Name <input type="text" class="tName" value="${t ? t.name : ''}"></label>
-    <label>Email <input type="text" class="tEmail" value="${t ? t.email : ''}"></label>
+    <label>ID <input type="text" class="tId" value="${t ? (t.id || '') : ''}"></label>
+    <label>Name <input type="text" class="tName" value="${t ? (t.name || '') : ''}"></label>
+    <label>Email <input type="text" class="tEmail" value="${t ? (t.email || '') : ''}"></label>
   `;
   document.getElementById('teachers').appendChild(div);
 }
@@ -89,9 +93,9 @@ function addAssessment(a = null) {
   div.innerHTML = `
     <h2>Assessment</h2>
     <span class="remove" onclick="this.parentElement.parentElement.remove()">✖ Remove Assessment</span>
-    <label>Assessment ID <input type="text" class="assId" value="${a ? a.id : ''}"></label>
-    <label>Title <input type="text" class="assTitle" value="${a ? a.title : ''}"></label>
-    <label>Subtitle <input type="text" class="assSubtitle" value="${a ? a.subtitle : ''}"></label>
+    <label>Assessment ID <input type="text" class="assId" value="${a ? (a.id || '') : ''}"></label>
+    <label>Title <input type="text" class="assTitle" value="${a ? (a.title || '') : ''}"></label>
+    <label>Subtitle <input type="text" class="assSubtitle" value="${a ? (a.subtitle || '') : ''}"></label>
     <div class="questions"></div>
     <button type="button" class="add-btn" onclick="addQuestion(this.closest('.section').querySelector('.questions'))">+ Add Question</button>
   `;
@@ -104,11 +108,11 @@ function addQuestion(container, q = null) {
   div.className = 'question';
   div.innerHTML = `
     <span class="remove" onclick="this.parentElement.remove()">✖</span>
-    <label>Question ID <input type="text" class="qId" value="${q ? q.id : ''}"></label>
+    <label>Question ID <input type="text" class="qId" value="${q ? (q.id || '') : ''}"></label>
     <label>Text (you can use \\n for line breaks)<br>
-      <textarea class="qText">${q ? q.text : ''}</textarea></label>
-    <label>Image filename (or blank.jpg) <input type="text" class="qImage" value="${q ? q.image : 'blank.jpg'}"></label>
-    <label>Hint <input type="text" class="qHint" value="${q ? q.hint : ''}"></label>
+      <textarea class="qText">${q ? (q.text || '') : ''}</textarea></label>
+    <label>Image filename (or blank.jpg) <input type="text" class="qImage" value="${q ? (q.image || 'blank.jpg') : 'blank.jpg'}"></label>
+    <label>Hint <input type="text" class="qHint" value="${q ? (q.hint || '') : ''}"></label>
     <label>Type 
       <select class="qType" onchange="toggleOptionsRubric(this)">
         <option value="mc" ${q && q.type === 'mc' ? 'selected' : ''}>Multiple Choice (mc)</option>
@@ -116,15 +120,15 @@ function addQuestion(container, q = null) {
         <option value="long" ${q && q.type === 'long' ? 'selected' : ''}>Long answer</option>
       </select>
     </label>
-    <label>Max Points <input type="number" class="qPoints" value="${q ? q.maxPoints : 1}"></label>
+    <label>Max Points <input type="number" class="qPoints" value="${q ? (q.maxPoints || 1) : 1}"></label>
 
-    <div class="options" style="display:${q && q.type === 'mc' ? 'block' : 'block'}">
+    <div class="options" style="display:block">
       <h4>Options</h4>
       <div class="option-list"></div>
       <button type="button" class="add-btn" onclick="addOptionRow(this.closest('.options').querySelector('.option-list'))">+ Add Option</button>
     </div>
 
-    <div class="rubric" style="display:${q && q.type === 'mc' ? 'none' : 'block'}">
+    <div class="rubric" style="display:block">
       <h4>Auto-grading Rubric</h4>
       <div class="rubric-list"></div>
       <button type="button" class="add-btn" onclick="addRubricRow(this.closest('.rubric').querySelector('.rubric-list'))">+ Add Rubric Rule</button>
@@ -134,11 +138,11 @@ function addQuestion(container, q = null) {
 
   // ---- Options: populate for MC / create default for new question ----
   const optContainer = div.querySelector('.option-list');
-  if (q && q.type === 'mc' && q.options) {
+  if (q && q.type === 'mc' && Array.isArray(q.options)) {
     let correctIndex = -1;
-    if (q.rubric && q.rubric.length > 0) {
+    if (q.rubric && q.rubric.length > 0 && q.rubric[0].check) {
       const pattern = q.rubric[0].check.toLowerCase();
-      correctIndex = q.options.findIndex(o => pattern.includes(o.toLowerCase()));
+      correctIndex = q.options.findIndex(o => pattern.includes((o || '').toLowerCase()));
     }
     q.options.forEach((optText, idx) => {
       addOptionRow(optContainer, {
@@ -191,28 +195,41 @@ function addOptionRow(container, opt = null) {
   container.appendChild(div);
 }
 
-// ---------- Rubric rows ----------
+// ---------- Rubric rows (with easy keywords) ----------
 function addRubricRow(container, r = null) {
   const div = document.createElement('div');
   div.className = 'rubric-row';
   div.innerHTML = `
     <span class="remove" onclick="this.parentElement.remove()">✖</span>
-    <label>Points <input type="number" class="rPoints" value="${r ? r.points : 1}"></label>
-    <label>Regex check (case-insensitive) <input type="text" class="rCheck" value="${r ? r.check : ''}"></label>
-    <label>Flags (usually "i") <input type="text" class="rFlags" value="${r ? r.flags : 'i'}"></label>
+    <label>Points
+      <input type="number" class="rPoints" value="${r ? (r.points || 1) : 1}">
+    </label>
+
+    <label>Easy keywords/phrases (comma separated)
+      <input type="text" class="rEasy" placeholder="e.g. struck in the eye, flying particles, objects">
+    </label>
+
+    <label>Regex check (advanced, optional)
+      <input type="text" class="rCheck" value="${r ? (r.check || '') : ''}">
+    </label>
+
+    <label>Flags (usually &quot;i&quot;)
+      <input type="text" class="rFlags" value="${r ? (r.flags || 'i') : 'i'}">
+    </label>
   `;
   container.appendChild(div);
 }
 
-// ---------- Collect everything ----------
+// ---------- Collect everything for export ----------
 function collectAll() {
   // General fields
   data.APP_ID = document.getElementById('appId').value.trim();
   data.VERSION = document.getElementById('version').value.trim();
   data.APP_TITLE = document.getElementById('appTitle').value.trim();
   data.APP_SUBTITLE = document.getElementById('appSubtitle').value.trim();
-  data.DEADLINE.day = parseInt(document.getElementById('deadlineDay').value);
-  data.DEADLINE.month = parseInt(document.getElementById('deadlineMonth').value);
+  data.DEADLINE = data.DEADLINE || {};
+  data.DEADLINE.day = parseInt(document.getElementById('deadlineDay').value) || 1;
+  data.DEADLINE.month = parseInt(document.getElementById('deadlineMonth').value) || 1;
   data.DEADLINE.label = document.getElementById('deadlineLabel').value.trim();
 
   collectTeachers();
@@ -256,13 +273,30 @@ function collectAll() {
           }
         }
       } else {
-        // Short/long questions use manual regex rubric
-        const rubric = Array.from(qDiv.querySelectorAll('.rubric-row')).map(row => ({
-          points: parseInt(row.querySelector('.rPoints').value),
-          check: row.querySelector('.rCheck').value.trim(),
-          flags: row.querySelector('.rFlags').value.trim()
-        }));
-        question.rubric = rubric.filter(r => r.check);
+        // Short/long questions use easy keywords -> regex OR manual regex
+        const rubric = Array.from(qDiv.querySelectorAll('.rubric-row')).map(row => {
+          const points = parseInt(row.querySelector('.rPoints').value) || 1;
+          let check = row.querySelector('.rCheck').value.trim();
+          const flags = row.querySelector('.rFlags').value.trim() || 'i';
+          const easyInput = row.querySelector('.rEasy') ? row.querySelector('.rEasy').value.trim() : '';
+
+          // If no manual regex but easy keywords are given, build regex:
+          // requires ALL phrases, in any order: (?=.*phrase1)(?=.*phrase2).* 
+          if (!check && easyInput) {
+            const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
+            if (parts.length) {
+              const pieces = parts.map(p => {
+                const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                return `(?=.*${escaped})`;
+              });
+              check = pieces.join('') + '.*';
+            }
+          }
+
+          return { points, check, flags };
+        });
+
+        question.rubric = rubric.filter(r => r.check); // remove empty rules
       }
 
       return question;
@@ -277,7 +311,7 @@ function collectAll() {
   });
 }
 
-// ---------- Generate & Download ----------
+// ---------- Generate & Download JSON ----------
 function generateJSON() {
   collectAll();
   const jsonString = JSON.stringify(data, null, 2);
@@ -288,6 +322,59 @@ function generateJSON() {
   a.download = `${data.APP_ID}_v${data.VERSION}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ---------- Load JSON from file ----------
+function loadJSONFile() {
+  const input = document.getElementById('jsonFile');
+  const file = input.files[0];
+  if (!file) {
+    alert('Please choose a JSON file first.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const obj = JSON.parse(e.target.result);
+      loadFromData(obj);
+    } catch (err) {
+      console.error(err);
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ---------- Populate UI from a data object ----------
+function loadFromData(obj) {
+  if (!obj || typeof obj !== 'object') {
+    alert('JSON does not look like a quiz data object.');
+    return;
+  }
+
+  data = obj; // keep a copy
+
+  // General
+  document.getElementById('appId').value = obj.APP_ID || '';
+  document.getElementById('version').value = obj.VERSION || '';
+  document.getElementById('appTitle').value = obj.APP_TITLE || '';
+  document.getElementById('appSubtitle').value = obj.APP_SUBTITLE || '';
+
+  const deadline = obj.DEADLINE || {};
+  document.getElementById('deadlineDay').value = deadline.day || 1;
+  document.getElementById('deadlineMonth').value = deadline.month || 1;
+  document.getElementById('deadlineLabel').value = deadline.label || '';
+
+  // Teachers
+  const tContainer = document.getElementById('teachers');
+  tContainer.innerHTML = '';
+  (obj.TEACHERS || []).forEach(t => addTeacher(t));
+
+  // Assessments
+  const aContainer = document.getElementById('assessments');
+  aContainer.innerHTML = '';
+  (obj.ASSESSMENTS || []).forEach(a => addAssessment(a));
 }
 
 // ---------- Initial setup ----------
