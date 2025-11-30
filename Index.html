@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Quiz JSON Builder Pukekohe High School</title>
+<title>Quiz JSON Builder for BCATS Safety Assessments</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -42,6 +42,56 @@
     border-radius: 10px;
     background: #e9f1ff;
   }
+
+  /* Collapsible headers for sections & questions */
+  .section-header,
+  .question-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .section-header-title,
+  .question-header-title {
+    font-weight: bold;
+    flex: 1;
+  }
+
+  /* Visible collapse button */
+  .collapse-btn {
+    border: 2px solid #1b3a57;
+    background: #ffffff;
+    color: #1b3a57;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px rgba(27, 58, 87, 0.08);
+  }
+  .collapse-btn:hover {
+    background: #1b3a57;
+    color: #ffffff;
+  }
+  .section.collapsed .collapse-btn,
+  .question.collapsed .collapse-btn {
+    background: #dfe6f5;
+    color: #1b3a57;
+  }
+
+  .collapsed .section-body,
+  .collapsed .question-body {
+    display: none;
+  }
+  .collapsed {
+    opacity: 0.95;
+  }
+
   .teacher {
     border: 1px solid #cfd8e3;
     padding: 10px;
@@ -65,6 +115,16 @@
   .question:nth-child(even) {
     border-left: 6px solid #2ecc71;
   }
+
+  /* Drag & drop visuals */
+  .question.dragging {
+    opacity: 0.6;
+    border-style: dashed;
+  }
+  .question.drop-target {
+    outline: 2px dashed #1b3a57;
+  }
+
   .rubric-row, .option-row {
     border: 1px solid #dde3f0;
     padding: 10px;
@@ -96,7 +156,6 @@
     color: #2b7a32;
   }
   .remove {
-    float: right;
     color: #e74c3c;
     cursor: pointer;
     font-weight: bold;
@@ -116,7 +175,7 @@
   .add-btn:hover { background: #1e8449; }
   .secondary-btn { background: #7f8c8d; }
   .secondary-btn:hover { background: #626e70; }
-  .controls { margin: 20px 0; }
+  .controls { margin: 16px 0 24px; }
 
   .image-drop {
     margin-top: 6px;
@@ -142,41 +201,79 @@
     color: #666;
     margin-top: 2px;
   }
+
+  .question-tester {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px dashed #b0bec5;
+    background: #fafafa;
+    font-size: 12px;
+  }
+  .question-tester h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: #37474f;
+  }
+  .question-tester textarea {
+    height: 70px;
+  }
+  .qTestResult {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #37474f;
+    white-space: pre-line;
+  }
 </style>
 </head>
 <body>
 
 <h1>Quiz JSON Builder – BCATS Safety Assessments</h1>
 
-<div class="section">
-  <h2>General Information</h2>
-  <label>APP_ID <input type="text" id="appId" value="US24352_SAFETY"></label>
-  <label>VERSION <input type="text" id="version" value="2025"></label>
-  <label>APP_TITLE <input type="text" id="appTitle" value="US 24352 – Safety Knowledge"></label>
-  <label>APP_SUBTITLE <input type="text" id="appSubtitle" value="PHS - L1 Building – Assessment"></label>
-
-  <label>Deadline Day <input type="number" id="deadlineDay" value="17"></label>
-  <label>Deadline Month <input type="number" id="deadlineMonth" value="12"></label>
-  <label>Deadline Label <input type="text" id="deadlineLabel" value="Submission deadline"></label>
+<!-- CONTROLS AT THE TOP -->
+<div class="controls">
+  <input type="file" id="jsonFile" accept="application/json">
+  <button type="button" onclick="loadJSONFile()">Load JSON File</button>
+  <button type="button" onclick="clearDraft()">Clear Draft</button>
+  <button type="button" class="secondary-btn" onclick="expandAllSections()">Expand all assessments & questions</button>
+  <button type="button" class="secondary-btn" onclick="collapseAllSections()">Collapse all assessments & questions</button>
+  <button type="button" onclick="generateJSON()">Download JSON File</button>
 </div>
 
-<div class="section">
-  <h2>Teachers</h2>
-  <div id="teachers"></div>
-  <button type="button" class="add-btn" onclick="addTeacher()">+ Add Teacher</button>
+<!-- GENERAL INFO (NOW COLLAPSIBLE) -->
+<div class="section collapsed">
+  <div class="section-header">
+    <button type="button" class="collapse-btn" onclick="toggleSectionCollapse(this)">▸</button>
+    <span class="section-header-title">General Information</span>
+  </div>
+  <div class="section-body">
+    <label>APP_ID <input type="text" id="appId" value="US24352_SAFETY"></label>
+    <label>VERSION <input type="text" id="version" value="2025"></label>
+    <label>APP_TITLE <input type="text" id="appTitle" value="US 24352 – Safety Knowledge"></label>
+    <label>APP_SUBTITLE <input type="text" id="appSubtitle" value="PHS - L1 Building – Assessment"></label>
+
+    <label>Deadline Day <input type="number" id="deadlineDay" value="17"></label>
+    <label>Deadline Month <input type="number" id="deadlineMonth" value="12"></label>
+    <label>Deadline Label <input type="text" id="deadlineLabel" value="Submission deadline"></label>
+  </div>
+</div>
+
+<!-- TEACHERS (NOW COLLAPSIBLE) -->
+<div class="section collapsed">
+  <div class="section-header">
+    <button type="button" class="collapse-btn" onclick="toggleSectionCollapse(this)">▸</button>
+    <span class="section-header-title">Teachers</span>
+  </div>
+  <div class="section-body">
+    <div id="teachers"></div>
+    <button type="button" class="add-btn" onclick="addTeacher()">+ Add Teacher</button>
+  </div>
 </div>
 
 <div class="section">
   <h2>Assessments</h2>
   <div id="assessments"></div>
   <button type="button" class="add-btn" onclick="addAssessment()">+ Add Assessment</button>
-</div>
-
-<div class="controls">
-  <input type="file" id="jsonFile" accept="application/json">
-  <button type="button" onclick="loadJSONFile()">Load JSON File</button>
-  <button type="button" onclick="clearDraft()">Clear Draft</button>
-  <button type="button" onclick="generateJSON()">Download JSON File</button>
 </div>
 
 <script>
@@ -191,6 +288,139 @@ let data = {
 };
 
 let isLoading = false;
+
+// For drag & drop
+let draggedQuestion = null;
+
+// Helper to keep regex flags sane
+function sanitizeFlags(flags) {
+  const valid = (flags || "").replace(/[^gimsuy]/g, "");
+  return [...new Set(valid.split(""))].join("");
+}
+
+// Get flags from a rubric row
+function getFlagsForRow(row) {
+  const select = row.querySelector('.rFlagsSelect');
+  const flagsInput = row.querySelector('.rFlags');
+  let flags;
+  if (select) {
+    if (select.value === 'custom') {
+      flags = (flagsInput.value.trim() || 'i');
+    } else {
+      flags = select.value; // can be '', 'i', 'im', 'is'
+    }
+  } else if (flagsInput) {
+    flags = flagsInput.value.trim() || 'i';
+  } else {
+    flags = 'i';
+  }
+  return sanitizeFlags(flags || 'i');
+}
+
+// ---------- Collapse helpers ----------
+function toggleSectionCollapse(btn) {
+  const section = btn.closest('.section');
+  if (!section) return;
+  section.classList.toggle('collapsed');
+  btn.textContent = section.classList.contains('collapsed') ? '▸' : '▾';
+}
+
+function toggleQuestionCollapse(btn) {
+  const q = btn.closest('.question');
+  if (!q) return;
+  q.classList.toggle('collapsed');
+  btn.textContent = q.classList.contains('collapsed') ? '▸' : '▾';
+}
+
+// Expand/collapse all assessments & questions
+function expandAllSections() {
+  const sections = document.querySelectorAll('#assessments > .section');
+  sections.forEach(section => {
+    section.classList.remove('collapsed');
+    const sBtn = section.querySelector('.section-header .collapse-btn');
+    if (sBtn) sBtn.textContent = '▾';
+    const questions = section.querySelectorAll('.question');
+    questions.forEach(q => {
+      q.classList.remove('collapsed');
+      const qBtn = q.querySelector('.question-header .collapse-btn');
+      if (qBtn) qBtn.textContent = '▾';
+    });
+  });
+}
+
+function collapseAllSections() {
+  const sections = document.querySelectorAll('#assessments > .section');
+  sections.forEach(section => {
+    section.classList.add('collapsed');
+    const sBtn = section.querySelector('.section-header .collapse-btn');
+    if (sBtn) sBtn.textContent = '▸';
+    const questions = section.querySelectorAll('.question');
+    questions.forEach(q => {
+      q.classList.add('collapsed');
+      const qBtn = q.querySelector('.question-header .collapse-btn');
+      if (qBtn) qBtn.textContent = '▸';
+    });
+  });
+}
+
+// ---------- Drag & drop for questions ----------
+function questionDragStart(e) {
+  draggedQuestion = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  // Needed in some browsers
+  e.dataTransfer.setData('text/plain', '');
+}
+
+function questionDragEnd(e) {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.question.drop-target').forEach(el => el.classList.remove('drop-target'));
+  draggedQuestion = null;
+}
+
+function questionDragOver(e) {
+  e.preventDefault();
+  if (!draggedQuestion) return;
+  e.dataTransfer.dropEffect = 'move';
+
+  const target = e.currentTarget;
+  if (target === draggedQuestion) return;
+
+  document.querySelectorAll('.question.drop-target').forEach(el => el.classList.remove('drop-target'));
+  target.classList.add('drop-target');
+}
+
+function questionDrop(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  if (!draggedQuestion || draggedQuestion === target) return;
+
+  const container = target.parentElement;
+  const rect = target.getBoundingClientRect();
+  const offset = e.clientY - rect.top;
+  const halfway = rect.height / 2;
+
+  if (offset > halfway) {
+    container.insertBefore(draggedQuestion, target.nextSibling);
+  } else {
+    container.insertBefore(draggedQuestion, target);
+  }
+
+  target.classList.remove('drop-target');
+}
+
+function questionDragLeave(e) {
+  e.currentTarget.classList.remove('drop-target');
+}
+
+function makeQuestionDraggable(qDiv) {
+  qDiv.setAttribute('draggable', 'true');
+  qDiv.addEventListener('dragstart', questionDragStart);
+  qDiv.addEventListener('dragend', questionDragEnd);
+  qDiv.addEventListener('dragover', questionDragOver);
+  qDiv.addEventListener('drop', questionDrop);
+  qDiv.addEventListener('dragleave', questionDragLeave);
+}
 
 // ---------- Teachers ----------
 function addTeacher(t = null) {
@@ -216,28 +446,52 @@ function collectTeachers() {
 // ---------- Assessments & Questions ----------
 function addAssessment(a = null) {
   const div = document.createElement('div');
-  div.className = 'section';
+  // Start collapsed by default
+  div.className = 'section collapsed';
+  const titleText = a ? (a.title || a.id || 'Assessment') : 'New Assessment';
+
   div.innerHTML = `
-    <h2>Assessment</h2>
-    <span class="remove" onclick="this.parentElement.parentElement.remove()">✖ Remove Assessment</span>
-    <button type="button" class="secondary-btn" onclick="duplicateAssessment(this)">Duplicate Assessment</button>
-    <label>Assessment ID <input type="text" class="assId" value="${a ? (a.id || '') : ''}"></label>
-    <label>Title <input type="text" class="assTitle" value="${a ? (a.title || '') : ''}"></label>
-    <label>Subtitle <input type="text" class="assSubtitle" value="${a ? (a.subtitle || '') : ''}"></label>
-    <label>US Number <input type="text" class="assUSNumber" value="${a ? (a.usNumber || '') : ''}"></label>
-    <label>US Version <input type="text" class="assUSVersion" value="${a ? (a.usVersion || '') : ''}"></label>
-    <label>Credits <input type="number" class="assCredits" value="${a && a.credits != null ? a.credits : ''}"></label>
-    <label>Standard Type
-      <select class="assType">
-        <option value="">(optional)</option>
-        <option value="internal" ${a && a.standardType === 'internal' ? 'selected' : ''}>Internal</option>
-        <option value="external" ${a && a.standardType === 'external' ? 'selected' : ''}>External</option>
-      </select>
-    </label>
-    <div class="questions"></div>
-    <button type="button" class="add-btn" onclick="addQuestion(this.closest('.section').querySelector('.questions'))">+ Add Question</button>
+    <div class="section-header">
+      <button type="button" class="collapse-btn" onclick="toggleSectionCollapse(this)">▸</button>
+      <span class="section-header-title">Assessment – <span class="assHeaderTitle">${titleText}</span></span>
+      <span style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+        <button type="button" class="secondary-btn" onclick="duplicateAssessment(this)">Duplicate</button>
+        <span class="remove" onclick="this.closest('.section').remove()">✖</span>
+      </span>
+    </div>
+    <div class="section-body">
+      <label>Assessment ID <input type="text" class="assId" value="${a ? (a.id || '') : ''}"></label>
+      <label>Title <input type="text" class="assTitle" value="${a ? (a.title || '') : ''}"></label>
+      <label>Subtitle <input type="text" class="assSubtitle" value="${a ? (a.subtitle || '') : ''}"></label>
+      <label>US Number <input type="text" class="assUSNumber" value="${a ? (a.usNumber || '') : ''}"></label>
+      <label>US Version <input type="text" class="assUSVersion" value="${a ? (a.usVersion || '') : ''}"></label>
+      <label>Credits <input type="number" class="assCredits" value="${a && a.credits != null ? a.credits : ''}"></label>
+      <label>Standard Type
+        <select class="assType">
+          <option value="">(optional)</option>
+          <option value="internal" ${a && a.standardType === 'internal' ? 'selected' : ''}>Internal</option>
+          <option value="external" ${a && a.standardType === 'external' ? 'selected' : ''}>External</option>
+        </select>
+      </label>
+      <div class="questions"></div>
+      <button type="button" class="add-btn" onclick="addQuestion(this.closest('.section').querySelector('.questions'))">+ Add Question</button>
+    </div>
   `;
   document.getElementById('assessments').appendChild(div);
+
+  // keep header title in sync with assessment title
+  const titleInput = div.querySelector('.assTitle');
+  const headerTitleEl = div.querySelector('.assHeaderTitle');
+  titleInput.addEventListener('input', () => {
+    headerTitleEl.textContent = titleInput.value || (div.querySelector('.assId').value || 'Assessment');
+  });
+  const idInput = div.querySelector('.assId');
+  idInput.addEventListener('input', () => {
+    if (!titleInput.value) {
+      headerTitleEl.textContent = idInput.value || 'Assessment';
+    }
+  });
+
   if (a && a.questions) a.questions.forEach(q => addQuestion(div.querySelector('.questions'), q));
 }
 
@@ -245,58 +499,107 @@ function duplicateAssessment(btn) {
   const assDiv = btn.closest('.section');
   const container = document.getElementById('assessments');
   const clone = assDiv.cloneNode(true);
+  clone.classList.add('collapsed');
   const idInput = clone.querySelector('.assId');
+  const headerTitleEl = clone.querySelector('.assHeaderTitle');
+  const collapseBtn = clone.querySelector('.collapse-btn');
+
   if (idInput) idInput.value = (idInput.value || '') + '_copy';
+  if (headerTitleEl && idInput) headerTitleEl.textContent = idInput.value || headerTitleEl.textContent;
+  if (collapseBtn) collapseBtn.textContent = '▸';
+
+  // rewire title/id events for clone
+  const titleInput = clone.querySelector('.assTitle');
+  if (titleInput && headerTitleEl) {
+    titleInput.addEventListener('input', () => {
+      headerTitleEl.textContent = titleInput.value || (clone.querySelector('.assId').value || 'Assessment');
+    });
+  }
+  const idInputClone = clone.querySelector('.assId');
+  if (idInputClone && headerTitleEl && titleInput) {
+    idInputClone.addEventListener('input', () => {
+      if (!titleInput.value) {
+        headerTitleEl.textContent = idInputClone.value || 'Assessment';
+      }
+    });
+  }
+
+  // make all questions inside the cloned assessment draggable
+  clone.querySelectorAll('.question').forEach(q => makeQuestionDraggable(q));
+
   container.insertBefore(clone, assDiv.nextSibling);
 }
 
 // ---------- Questions ----------
 function addQuestion(container, q = null) {
   const div = document.createElement('div');
-  div.className = 'question';
+  // start questions collapsed inside collapsed sections
+  div.className = 'question collapsed';
+
+  const qIdVal = q ? (q.id || '') : '';
+  const headerLabel = qIdVal || 'New question';
+
   div.innerHTML = `
-    <span class="remove" onclick="this.parentElement.remove()">✖</span>
-    <button type="button" class="secondary-btn" onclick="duplicateQuestion(this)">Duplicate Question</button>
-    <label>Question ID <input type="text" class="qId" value="${q ? (q.id || '') : ''}"></label>
-    <label>Text (you can use \\n for line breaks)<br>
-      <textarea class="qText">${q ? (q.text || '') : ''}</textarea></label>
-
-    <label>Image filename (or blank.jpg)
-      <input type="text" class="qImage" value="${q ? (q.image || 'blank.jpg') : 'blank.jpg'}">
-      <div class="image-filename-note">This will be written into the JSON. Make sure it matches the actual file name in your images folder.</div>
-    </label>
-    <div class="image-drop"
-         onclick="imageDropClick(this)"
-         ondragover="handleImageDragOver(event)"
-         ondragleave="handleImageDragLeave(event)"
-         ondrop="handleImageDrop(event)">
-      <span>📷 Drag a photo here or click to choose a file</span>
-      <input type="file" accept="image/*" class="qImageFile" style="display:none" onchange="handleImageFileSelect(this)">
+    <div class="question-header">
+      <button type="button" class="collapse-btn" onclick="toggleQuestionCollapse(this)">▸</button>
+      <span class="question-header-title">Question – <span class="qHeaderTitle">${headerLabel}</span></span>
+      <span style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+        <button type="button" class="secondary-btn" onclick="duplicateQuestion(this)">Duplicate</button>
+        <span class="remove" onclick="this.closest('.question').remove()">✖</span>
+      </span>
     </div>
+    <div class="question-body">
+      <label>Question ID <input type="text" class="qId" value="${q ? (q.id || '') : ''}"></label>
+      <label>Text (you can use \\n for line breaks)<br>
+        <textarea class="qText">${q ? (q.text || '') : ''}</textarea></label>
 
-    <label>Hint <input type="text" class="qHint" value="${q ? (q.hint || '') : ''}"></label>
-    <label>Type 
-      <select class="qType" onchange="toggleOptionsRubric(this)">
-        <option value="mc" ${q && q.type === 'mc' ? 'selected' : ''}>Multiple Choice (mc)</option>
-        <option value="short" ${q && q.type === 'short' ? 'selected' : ''}>Short answer</option>
-        <option value="long" ${q && q.type === 'long' ? 'selected' : ''}>Long answer</option>
-      </select>
-    </label>
-    <label>Max Points <input type="number" class="qPoints" value="${q ? (q.maxPoints || 1) : 1}"></label>
+      <label>Image filename (or blank.jpg)
+        <input type="text" class="qImage" value="${q ? (q.image || 'blank.jpg') : 'blank.jpg'}">
+        <div class="image-filename-note">This will be written into the JSON. Make sure it matches the actual file name in your images folder.</div>
+      </label>
+      <div class="image-drop"
+          onclick="imageDropClick(this)"
+          ondragover="handleImageDragOver(event)"
+          ondragleave="handleImageDragLeave(event)"
+          ondrop="handleImageDrop(event)">
+        <span>📷 Drag a photo here or click to choose a file</span>
+        <input type="file" accept="image/*" class="qImageFile" style="display:none" onchange="handleImageFileSelect(this)">
+      </div>
 
-    <div class="options" style="display:block">
-      <h4>Options</h4>
-      <div class="option-list"></div>
-      <button type="button" class="add-btn" onclick="addOptionRow(this.closest('.options').querySelector('.option-list'))">+ Add Option</button>
-    </div>
+      <label>Hint <input type="text" class="qHint" value="${q ? (q.hint || '') : ''}"></label>
+      <label>Type 
+        <select class="qType" onchange="toggleOptionsRubric(this)">
+          <option value="mc" ${q && q.type === 'mc' ? 'selected' : ''}>Multiple Choice (mc)</option>
+          <option value="short" ${q && q.type === 'short' ? 'selected' : ''}>Short answer</option>
+          <option value="long" ${q && q.type === 'long' ? 'selected' : ''}>Long answer</option>
+        </select>
+      </label>
+      <label>Max Points <input type="number" class="qPoints" value="${q ? (q.maxPoints || 1) : 1}"></label>
 
-    <div class="rubric" style="display:block">
-      <h4>Auto-grading Rubric</h4>
-      <div class="rubric-list"></div>
-      <button type="button" class="add-btn" onclick="addRubricRow(this.closest('.rubric').querySelector('.rubric-list'))">+ Add Rubric Rule</button>
+      <div class="options" style="display:block">
+        <h4>Options</h4>
+        <div class="option-list"></div>
+        <button type="button" class="add-btn" onclick="addOptionRow(this.closest('.options').querySelector('.option-list'))">+ Add Option</button>
+      </div>
+
+      <div class="rubric" style="display:block">
+        <h4>Auto-grading Rubric</h4>
+        <div class="rubric-list"></div>
+        <button type="button" class="add-btn" onclick="addRubricRow(this.closest('.rubric').querySelector('.rubric-list'))">+ Add Rubric Rule</button>
+      </div>
+
+      <div class="question-tester">
+        <h4>Test this question with a sample answer</h4>
+        <textarea class="qSample" placeholder="Paste a student answer here"></textarea>
+        <button type="button" class="secondary-btn" onclick="testQuestionSample(this.closest('.question'))">Test full question</button>
+        <div class="qTestResult"></div>
+      </div>
     </div>
   `;
   container.appendChild(div);
+
+  // Make this new question draggable
+  makeQuestionDraggable(div);
 
   // Options: MC
   const optContainer = div.querySelector('.option-list');
@@ -328,17 +631,40 @@ function addQuestion(container, q = null) {
   const select = div.querySelector('.qType');
   toggleOptionsRubric(select);
 
-  // Auto-suggest ID on text blur
+  // Auto-suggest ID on text blur + keep header label in sync
   const qText = div.querySelector('.qText');
+  const qIdInput = div.querySelector('.qId');
+  const headerTitleEl = div.querySelector('.qHeaderTitle');
+
   qText.addEventListener('blur', () => suggestQuestionId(div));
+  qIdInput.addEventListener('input', () => {
+    headerTitleEl.textContent = qIdInput.value || 'Question';
+  });
 }
 
 function duplicateQuestion(btn) {
   const qDiv = btn.closest('.question');
   const container = qDiv.parentElement;
   const clone = qDiv.cloneNode(true);
+  clone.classList.add('collapsed');
   const idInput = clone.querySelector('.qId');
+  const headerTitleEl = clone.querySelector('.qHeaderTitle');
+  const collapseBtn = clone.querySelector('.collapse-btn');
+
   if (idInput) idInput.value = (idInput.value || '') + '_copy';
+  if (headerTitleEl && idInput) headerTitleEl.textContent = idInput.value || headerTitleEl.textContent;
+  if (collapseBtn) collapseBtn.textContent = '▸';
+
+  const qIdInput = clone.querySelector('.qId');
+  if (qIdInput && headerTitleEl) {
+    qIdInput.addEventListener('input', () => {
+      headerTitleEl.textContent = qIdInput.value || 'Question';
+    });
+  }
+
+  // make duplicated question draggable
+  makeQuestionDraggable(clone);
+
   container.insertBefore(clone, qDiv.nextSibling);
 }
 
@@ -352,6 +678,8 @@ function suggestQuestionId(qDiv) {
     .slice(0, 40);
   if (!base) base = 'q' + Date.now();
   idInput.value = base;
+  const headerTitleEl = qDiv.querySelector('.qHeaderTitle');
+  if (headerTitleEl) headerTitleEl.textContent = base;
 }
 
 function toggleOptionsRubric(select) {
@@ -376,7 +704,7 @@ function handleImageFileSelect(input) {
   if (!qDiv) return;
   const imgInput = qDiv.querySelector('.qImage');
   if (imgInput) {
-    imgInput.value = file.name; // just the filename for JSON
+    imgInput.value = file.name;
   }
 }
 
@@ -424,6 +752,67 @@ function addOptionRow(container, opt = null) {
   container.appendChild(div);
 }
 
+// ---------- Flags explanation helper ----------
+function updateFlagExplanation(selectEl) {
+  const row = selectEl.closest('.rubric-row');
+  const textInput = row.querySelector('.rFlags');
+  const explanation = row.querySelector('.flagExplanation');
+  const value = selectEl.value;
+
+  if (value === "custom") {
+    textInput.style.display = "block";
+    if (!textInput.value.trim()) {
+      textInput.value = "";
+    }
+  } else {
+    textInput.style.display = "none";
+    textInput.value = value;
+  }
+
+  switch (value) {
+    case "i":
+      explanation.textContent = "Matches answers regardless of UPPER/lower case.";
+      break;
+    case "im":
+      explanation.textContent = "Multi-line mode: ^ and $ match each line. Case is ignored.";
+      break;
+    case "is":
+      explanation.textContent = "Dot-all: .* can span across line breaks. Case is ignored.";
+      break;
+    case "":
+      explanation.textContent = "Case-sensitive exact match. Rarely needed for student answers.";
+      break;
+    case "custom":
+      explanation.textContent = "Advanced: enter flags manually (e.g. im, ig, ims).";
+      break;
+    default:
+      explanation.textContent = "";
+  }
+}
+
+// Update preview text for a rubric row
+function updateRubricPreview(row) {
+  const preview = row.querySelector('.rPreview');
+  if (!preview) return;
+
+  const easy = row.querySelector('.rEasy')?.value.trim() || '';
+  const adv = row.querySelector('.rCheck')?.value.trim() || '';
+
+  if (adv) {
+    preview.textContent = `Using advanced regex: ${adv}`;
+  } else if (easy) {
+    const parts = easy.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length) {
+      // NEW: explain alternation behaviour
+      preview.textContent = `Will match if the answer contains any of: ${parts.join('; ')}`;
+    } else {
+      preview.textContent = '';
+    }
+  } else {
+    preview.textContent = '';
+  }
+}
+
 // ---------- Rubric rows (layman-friendly) ----------
 function addRubricRow(container, r = null) {
   const div = document.createElement('div');
@@ -431,98 +820,238 @@ function addRubricRow(container, r = null) {
   div.innerHTML = `
     <span class="remove" onclick="this.parentElement.remove()">✖</span>
 
-    <label>Points
+    <label>Points (for this rule)
       <input type="number" class="rPoints" value="${r ? (r.points || 1) : 1}">
     </label>
 
-    <label>Match type
-      <select class="rMode">
-        <option value="all">Answer contains ALL of these</option>
-        <option value="any">Answer contains ANY of these</option>
-        <option value="exact">Answer matches EXACTLY this phrase</option>
-      </select>
-    </label>
-
-    <label>Keywords/phrases (comma separated)
+    <label>Keywords/phrases (matches if ANY are mentioned)
       <input type="text" class="rEasy" placeholder="e.g. eye injury, blindness, flying particles">
     </label>
 
-    <label>Advanced regex (optional)
-      <input type="text" class="rCheck" value="${r ? (r.check || '') : ''}">
-    </label>
+    <label>Advanced regex (optional – use instead of keywords)
+      <input type="text" class="rCheck" value="${r ? (r.check || '') : ''}"></label>
 
-    <label>Flags (usually &quot;i&quot;)
-      <input type="text" class="rFlags" value="${r ? (r.flags || 'i') : 'i'}">
-    </label>
+    <label>Flags (how matching works)</label>
+    <select class="rFlagsSelect" onchange="updateFlagExplanation(this)">
+      <option value="i" selected>Ignore case (recommended)</option>
+      <option value="im">Ignore case + multi-line (^ matches each line)</option>
+      <option value="is">Ignore case + dot-all (.* across lines)</option>
+      <option value="">Exact matching (case-sensitive)</option>
+      <option value="custom">Custom (advanced)</option>
+    </select>
 
-    <label>Preview (auto-generated)
+    <input type="text" class="rFlags" style="display:none" placeholder="Enter flags e.g. im">
+
+    <div class="flagExplanation" style="font-size:11px; color:#555; margin-top:4px;">
+      Matches answers regardless of UPPER/lower case.
+    </div>
+
+    <label>Preview
       <div class="rPreview" style="font-size:11px; color:#555; min-height:1em;"></div>
     </label>
-
-    <label>Try a sample student answer
-      <input type="text" class="rSample" placeholder="Type an example answer to test">
-    </label>
-    <button type="button" class="secondary-btn" onclick="testRubricRow(this.closest('.rubric-row'))">Test this rule</button>
-    <div class="rTestResult" style="font-size:11px; margin-top:4px;"></div>
   `;
   container.appendChild(div);
+
+  // Initialise flags based on existing data (if loading from JSON)
+  const select = div.querySelector('.rFlagsSelect');
+  const flagsInput = div.querySelector('.rFlags');
+  let flags = r && r.flags !== undefined ? r.flags : 'i';
+
+  if (flags === 'i' || flags === 'im' || flags === 'is' || flags === '') {
+    select.value = flags;
+    flagsInput.value = flags;
+    flagsInput.style.display = 'none';
+  } else {
+    select.value = 'custom';
+    flagsInput.value = flags;
+    flagsInput.style.display = 'block';
+  }
+  updateFlagExplanation(select);
+
+  // Hook previews
+  const easyInput = div.querySelector('.rEasy');
+  const advInput = div.querySelector('.rCheck');
+  easyInput.addEventListener('input', () => updateRubricPreview(div));
+  advInput.addEventListener('input', () => updateRubricPreview(div));
+  updateRubricPreview(div);
 }
 
-// ---------- Regex builder helper ----------
-function buildCheckForRow(row) {
-  let check = row.querySelector('.rCheck').value.trim();
-  const flags = row.querySelector('.rFlags').value.trim() || 'i';
-  const easyInput = row.querySelector('.rEasy') ? row.querySelector('.rEasy').value.trim() : '';
-  const mode = row.querySelector('.rMode') ? row.querySelector('.rMode').value : 'all';
+// Count keyword matches for stats
+function countKeywordMatches(row, sample, flags) {
+  const easyInputEl = row.querySelector('.rEasy');
+  if (!easyInputEl) return { hits: 0, total: 0 };
+  const easyInput = easyInputEl.value.trim();
+  if (!easyInput) return { hits: 0, total: 0 };
 
-  if (!check && easyInput) {
-    const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
-    if (parts.length) {
-      if (mode === 'all') {
-        const pieces = parts.map(p => {
-          const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          return `(?=.*${escaped})`;
-        });
-        check = pieces.join('') + '.*';
-      } else if (mode === 'any') {
-        const alternatives = parts.map(p =>
-          p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        ).join('|');
-        check = `(${alternatives})`;
-      } else if (mode === 'exact') {
-        const phrase = easyInput.trim();
-        const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        check = `^${escaped}$`;
-      }
+  const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
+  if (!parts.length) return { hits: 0, total: 0 };
+
+  const cleanFlags = sanitizeFlags(flags || 'i');
+  let hits = 0;
+
+  parts.forEach(p => {
+    const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try {
+      const re = new RegExp(escaped, cleanFlags);
+      if (re.test(sample)) hits++;
+    } catch (e) {
+      // ignore bad keyword pattern; scoring still based on other items
     }
-  }
-  const preview = row.querySelector('.rPreview');
-  if (preview) {
-    preview.textContent = check ? `Generated: ${check}` : '';
-  }
-  return { check, flags };
+  });
+
+  return { hits, total: parts.length };
 }
 
-// ---------- Test rubric row ----------
-function testRubricRow(row) {
-  const { check, flags } = buildCheckForRow(row);
-  const sample = row.querySelector('.rSample').value;
-  const out = row.querySelector('.rTestResult');
+// ---------- Test full question (score + keyword matches) ----------
+function testQuestionSample(qDiv) {
+  const sampleEl = qDiv.querySelector('.qSample');
+  const resultEl = qDiv.querySelector('.qTestResult');
+  const sample = (sampleEl.value || '').trim();
 
-  if (!check) {
-    out.textContent = '⚠ No rule defined yet.';
-    return;
-  }
   if (!sample) {
-    out.textContent = '⚠ Please type a sample answer.';
+    resultEl.textContent = 'Please paste or type a sample answer first.';
     return;
   }
-  try {
-    const re = new RegExp(check, flags);
-    out.textContent = re.test(sample) ? '✅ Match' : '❌ No match';
-  } catch (e) {
-    out.textContent = '⚠ Invalid regex: ' + e.message;
+
+  const type = qDiv.querySelector('.qType').value;
+  const maxPointsField = parseInt(qDiv.querySelector('.qPoints').value) || 1;
+  let totalScore = 0;
+  let details = [];
+
+  // ---------- Multiple choice ----------
+  if (type === 'mc') {
+    const optRows = Array.from(qDiv.querySelectorAll('.option-row'));
+    const correctRow = optRows.find(r => r.querySelector('.optCorrect').checked);
+
+    if (!correctRow) {
+      resultEl.textContent = 'No correct option selected for this multiple-choice question.';
+      return;
+    }
+
+    const correctText = correctRow.querySelector('.optText').value.trim();
+    if (!correctText) {
+      resultEl.textContent = 'Correct option has no text.';
+      return;
+    }
+
+    const escaped = correctText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    try {
+      const re = new RegExp(escaped, 'i');
+      const hit = re.test(sample);
+      totalScore = hit ? maxPointsField : 0;
+
+      details.push(
+        hit
+          ? `Matched correct option text: "${correctText}".`
+          : `Did not find the exact correct option text. Sample must contain:\n"${correctText}".`
+      );
+    } catch (e) {
+      resultEl.textContent = 'Error in auto-generated pattern for MC: ' + e.message;
+      return;
+    }
+
+    resultEl.textContent =
+      `Score for this sample: ${totalScore} / ${maxPointsField}.\n` +
+      details.join(' ');
+    return;
   }
+
+  // ---------- Short / long answer ----------
+  const rows = Array.from(qDiv.querySelectorAll('.rubric-row'));
+  if (!rows.length) {
+    resultEl.textContent = 'No rubric rules defined for this question.';
+    return;
+  }
+
+  let maxRubricPoints = 0;
+  let totalKeywords = 0;
+  let totalKeywordHits = 0;
+
+  rows.forEach((row, idx) => {
+    const pts = parseInt(row.querySelector('.rPoints').value) || 1;
+    const adv = row.querySelector('.rCheck').value.trim();
+    const easyInput = row.querySelector('.rEasy').value.trim();
+    const flags = getFlagsForRow(row);
+
+    if (adv) {
+      // Advanced regex rule: single rule with "pts" points
+      maxRubricPoints += pts;
+      try {
+        const re = new RegExp(adv, flags);
+        const match = re.test(sample);
+        if (match) {
+          totalScore += pts;
+          details.push(`Rule ${idx + 1}: ✅ advanced regex matched (+${pts}).`);
+        } else {
+          details.push(`Rule ${idx + 1}: ❌ advanced regex did not match.`);
+        }
+      } catch (e) {
+        details.push(`Rule ${idx + 1}: ⚠ invalid advanced regex (${e.message}).`);
+      }
+
+      // Optional keyword stats even if advanced is used
+      if (easyInput) {
+        const kw = countKeywordMatches(row, sample, flags);
+        if (kw.total) {
+          totalKeywords += kw.total;
+          totalKeywordHits += kw.hits;
+          details[details.length - 1] += ` Keywords matched ${kw.hits}/${kw.total}.`;
+        }
+      }
+    } else if (easyInput) {
+      // NEW: treat comma-separated keywords as a single OR regex rule
+      const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length) {
+        const escapedParts = parts.map(p =>
+          p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        );
+        const pattern = '(?:' + escapedParts.join('|') + ')';
+
+        try {
+          const re = new RegExp(pattern, flags);
+          const match = re.test(sample);
+          maxRubricPoints += pts;
+
+          if (match) {
+            totalScore += pts;
+            details.push(
+              `Rule ${idx + 1}: ✅ matched at least one of [${parts.join(', ')}] (+${pts}).`
+            );
+          } else {
+            details.push(
+              `Rule ${idx + 1}: ❌ none of [${parts.join(', ')}] were found.`
+            );
+          }
+
+          // stats for how many of the keywords were hit
+          const kw = countKeywordMatches(row, sample, flags);
+          if (kw.total) {
+            totalKeywords += kw.total;
+            totalKeywordHits += kw.hits;
+            details[details.length - 1] += ` Keywords matched ${kw.hits}/${kw.total}.`;
+          }
+        } catch (e) {
+          details.push(
+            `Rule ${idx + 1}: ⚠ invalid generated regex from keywords (${e.message}).`
+          );
+        }
+      } else {
+        details.push(`Rule ${idx + 1}: no keywords defined.`);
+      }
+    } else {
+      details.push(`Rule ${idx + 1}: skipped (no keywords or regex).`);
+    }
+  });
+
+  let summary =
+    `Score for this sample based on rubric: ${totalScore} / ${maxRubricPoints || 0}.`;
+
+  if (totalKeywords > 0) {
+    summary += `\nTotal keyword matches (for info only): ${totalKeywordHits} / ${totalKeywords} across all rules.`;
+  }
+
+  resultEl.textContent = summary + '\n' + details.join(' ');
 }
 
 // ---------- Collect everything ----------
@@ -573,10 +1102,32 @@ function collectAll() {
           }
         }
       } else {
-        const rubric = Array.from(qDiv.querySelectorAll('.rubric-row')).map(row => {
-          const points = parseInt(row.querySelector('.rPoints').value) || 1;
-          const { check, flags } = buildCheckForRow(row);
-          return { points, check, flags };
+        const rubric = [];
+        const rows = Array.from(qDiv.querySelectorAll('.rubric-row'));
+        rows.forEach(row => {
+          const pts = parseInt(row.querySelector('.rPoints').value) || 1;
+          const adv = row.querySelector('.rCheck').value.trim();
+          const easyInput = row.querySelector('.rEasy').value.trim();
+          const flags = getFlagsForRow(row);
+
+          if (adv) {
+            // advanced rule as-is
+            rubric.push({ points: pts, check: adv, flags });
+          } else if (easyInput) {
+            // NEW: comma-separated keywords -> single OR regex, one rule
+            const parts = easyInput.split(',').map(s => s.trim()).filter(Boolean);
+            if (parts.length) {
+              const escapedParts = parts.map(p =>
+                p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              );
+              const alternation = '(?:' + escapedParts.join('|') + ')';
+              rubric.push({
+                points: pts,     // use the "Points" field for this whole rule
+                check: alternation,
+                flags
+              });
+            }
+          }
         });
         question.rubric = rubric.filter(r => r.check);
       }
@@ -692,6 +1243,8 @@ function loadJSONFile() {
     try {
       const obj = JSON.parse(e.target.result);
       loadFromData(obj);
+      // collapse all assessments/questions after loading
+      collapseAllSections();
     } catch (err) {
       console.error(err);
       alert('Invalid JSON file.');
@@ -728,6 +1281,9 @@ function loadFromData(obj) {
   aContainer.innerHTML = '';
   (obj.ASSESSMENTS || []).forEach(a => addAssessment(a));
 
+  // make all existing questions draggable (just in case)
+  document.querySelectorAll('.question').forEach(q => makeQuestionDraggable(q));
+
   isLoading = false;
 }
 
@@ -738,6 +1294,7 @@ function loadFromData(obj) {
     try {
       const obj = JSON.parse(draft);
       loadFromData(obj);
+      collapseAllSections(); // start collapsed when restoring draft (assessments/questions)
       return;
     } catch (e) {
       console.warn('Could not load draft, starting fresh.');
@@ -748,6 +1305,7 @@ function loadFromData(obj) {
   addTeacher({id:"RNR", name:"Mr Ranson", email:"rnr@pukekohehigh.school.nz"});
   addTeacher({id:"Other", name:"Other Teacher", email:"technology@pukekohehigh.school.nz"});
   addAssessment();
+  collapseAllSections(); // assessments/questions collapsed on fresh load
 })();
 </script>
 
