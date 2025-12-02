@@ -16,7 +16,7 @@
   <!-- External CSS -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- Main app script (defer so DOM exists before init runs) -->
+  <!-- Main app script (defer so DOM is ready before init runs) -->
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -28,14 +28,10 @@
   <input type="file" id="jsonFile" accept="application/json">
   <button type="button" onclick="loadJSONFile()">Load JSON File</button>
   <button type="button" onclick="clearDraft()">Clear Draft</button>
-  <button type="button" class="secondary-btn" onclick="expandAllSections()">
-    Expand all assessments & questions
-  </button>
-  <button type="button" class="secondary-btn" onclick="collapseAllSections()">
-    Collapse all assessments & questions
-  </button>
+  <button type="button" class="secondary-btn" onclick="expandAllSections()">Expand all assessments & questions</button>
+  <button type="button" class="secondary-btn" onclick="collapseAllSections()">Collapse all assessments & questions</button>
   <button type="button" onclick="generateJSON()">Download JSON File</button>
-  <!-- Dark mode toggle + Jump dropdown get injected here by script.js -->
+  <!-- Jump dropdown & Dark Mode button are injected via JS -->
 </div>
 
 <!-- GENERAL INFO (COLLAPSIBLE) -->
@@ -74,16 +70,6 @@
   <div id="assessments"></div>
   <button type="button" class="add-btn" onclick="addAssessment()">+ Add Assessment</button>
 </div>
-
-<!-- Service worker registration -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
-        .catch(err => console.log('Service worker registration failed:', err));
-    });
-  }
-</script>
 
 </body>
 </html>
