@@ -1,12 +1,11 @@
 {
-  "name": "Quiz JSON Builder – BCATS Safety Assessments",
-  "short_name": "QuizBuilder",
-  "description": "Build and manage quiz JSON files for BCATS safety assessments.",
-  "start_url": ".",
+  "name": "Quiz JSON Builder – BCATS Safety",
+  "short_name": "BCATS Quiz",
+  "description": "Build and manage BCATS safety quiz JSON files offline.",
+  "start_url": "./index.html",
   "display": "standalone",
-  "scope": ".",
+  "background_color": "#1b3a57",
   "theme_color": "#1b3a57",
-  "background_color": "#f4f6fb",
   "icons": [
     {
       "src": "icon-192.png",
