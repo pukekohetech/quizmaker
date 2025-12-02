@@ -11,6 +11,85 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quiz JSON Builder for BCATS Safety Assessments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1b3a57">
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Icons (optional but nice for PWA / bookmarks) -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Main app script (DEFER so DOM exists before init runs) -->
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+<h1>Quiz JSON Builder – BCATS Safety Assessments</h1>
+
+<!-- CONTROLS AT THE TOP -->
+<div class="controls">
+  <input type="file" id="jsonFile" accept="application/json">
+  <button type="button" onclick="loadJSONFile()">Load JSON File</button>
+  <button type="button" onclick="clearDraft()">Clear Draft</button>
+  <button type="button" class="secondary-btn" onclick="expandAllSections()">
+    Expand all assessments & questions
+  </button>
+  <button type="button" class="secondary-btn" onclick="collapseAllSections()">
+    Collapse all assessments & questions
+  </button>
+  <button type="button" onclick="generateJSON()">Download JSON File</button>
+  <!-- Dark mode toggle + Jump dropdown get injected here by script.js -->
+</div>
+
+<!-- GENERAL INFO (COLLAPSIBLE) -->
+<div class="section collapsed">
+  <div class="section-header">
+    <button type="button" class="collapse-btn" onclick="toggleSectionCollapse(this)">▸</button>
+    <span class="section-header-title">General Information</span>
+  </div>
+  <div class="section-body">
+    <label>APP_ID <input type="text" id="appId" value="US24352_SAFETY"></label>
+    <label>VERSION <input type="text" id="version" value="2025"></label>
+    <label>APP_TITLE <input type="text" id="appTitle" value="US 24352 – Safety Knowledge"></label>
+    <label>APP_SUBTITLE <input type="text" id="appSubtitle" value="PHS - L1 Building – Assessment"></label>
+
+    <label>Deadline Day <input type="number" id="deadlineDay" value="17"></label>
+    <label>Deadline Month <input type="number" id="deadlineMonth" value="12"></label>
+    <label>Deadline Label <input type="text" id="deadlineLabel" value="Submission deadline"></label>
+  </div>
+</div>
+
+<!-- TEACHERS (COLLAPSIBLE) -->
+<div class="section collapsed">
+  <div class="section-header">
+    <button type="button" class="collapse-btn" onclick="toggleSectionCollapse(this)">▸</button>
+    <span class="section-header-title">Teachers</span>
+  </div>
+  <div class="section-body">
+    <div id="teachers"></div>
+    <button type="button" class="add-btn" onclick="addTeacher()">+ Add Teacher</button>
+  </div>
+</div>
+
+<!-- ASSESSMENTS -->
+<div class="section">
+  <h2>Assessments</h2>
+  <div id="assessments"></div>
+  <button type="button" class="add-btn" onclick="addAssessment()">+ Add Assessment</button>
+</div>
+
+</body>
+</html>
 
   <h1>Quiz JSON Builder – BCATS Safety Assessments</h1>
 
